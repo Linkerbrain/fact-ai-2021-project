@@ -33,6 +33,7 @@ parser.add_argument('--data', default=None, required=True, type=str, help='Visio
 parser.add_argument('--epochs', default=None, required=True, type=int, help='Vision epoch.')
 opt = parser.parse_args()
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # init env
 setup = inversefed.utils.system_startup()
@@ -88,8 +89,8 @@ def accuracy_metric(idx_list, model, loss_fn, trainloader, validloader):
         dm = torch.as_tensor(inversefed.consts.cifar10_mean, **setup)[:, None, None]
         ds = torch.as_tensor(inversefed.consts.cifar10_std, **setup)[:, None, None]
     elif opt.data == 'FashionMinist':
-        dm = torch.Tensor([0.1307]).view(1, 1, 1).cuda()
-        ds = torch.Tensor([0.3081]).view(1, 1, 1).cuda()
+        dm = torch.Tensor([0.1307]).view(1, 1, 1).to(device)
+        ds = torch.Tensor([0.3081]).view(1, 1, 1).to(device)
     else:
         raise NotImplementedError
 
@@ -116,8 +117,8 @@ def reconstruct(idx, model, loss_fn, trainloader, validloader):
         dm = torch.as_tensor(inversefed.consts.cifar10_mean, **setup)[:, None, None]
         ds = torch.as_tensor(inversefed.consts.cifar10_std, **setup)[:, None, None]
     elif opt.data == 'FashionMinist':
-        dm = torch.Tensor([0.1307]).view(1, 1, 1).cuda()
-        ds = torch.Tensor([0.3081]).view(1, 1, 1).cuda()
+        dm = torch.Tensor([0.1307]).view(1, 1, 1).to(device)
+        ds = torch.Tensor([0.3081]).view(1, 1, 1).to(device)
     else:
         raise NotImplementedError
     
@@ -144,7 +145,7 @@ def reconstruct(idx, model, loss_fn, trainloader, validloader):
     dw_list = list()
     dx_list = list()
     bin_num = 20
-    noise_input = (torch.rand((ground_truth.shape)).cuda() - dm) / ds
+    noise_input = (torch.rand((ground_truth.shape)).to(device) - dm) / ds
     for dis_iter in range(bin_num+1):
         model.zero_grad()
         fake_ground_truth = (1.0 / bin_num * dis_iter * ground_truth + 1. / bin_num * (bin_num - dis_iter) * noise_input).detach()
@@ -170,11 +171,12 @@ def reconstruct(idx, model, loss_fn, trainloader, validloader):
 
 
 def main():
+
     loss_fn, trainloader, validloader = preprocess(opt, defs, valid=True)
     model = create_model(opt)
     model.to(**setup)
     old_state_dict = copy.deepcopy(model.state_dict())
-    model.load_state_dict(torch.load('checkpoints/tiny_data_{}_arch_{}/{}.pth'.format(opt.data, opt.arch, opt.epochs)))
+    model.load_state_dict(torch.load('checkpoints/tiny_data_{}_arch_{}/{}.pth'.format(opt.data, opt.arch, opt.epochs), map_location=device))
 
     model.eval()
     metric_list = list()

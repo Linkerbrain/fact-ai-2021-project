@@ -29,7 +29,7 @@ if __name__ == '__main__':
         
     results.sort(key=lambda x: x[1])
     for idx, result in enumerate(results):
-        if result[2] >= −85:
+        if result[2] >= -85:
             print(result)
 
 
