@@ -15,6 +15,8 @@ import torch.nn.functional as F
 import policy
 policies = policy.policies
 
+def not_a_lambda(x):
+    return x
 
 def create_model(opt):
     arch = opt.arch
@@ -46,6 +48,11 @@ def construct_policy(policy_list):
     else:
         raise NotImplementedError
 
+def lam_1(x):
+    return transforms.functional.to_grayscale(x, num_output_channels=3)
+
+def lam_2(x):
+    return transforms.functional.to_grayscale(x, num_output_channels=1)
 
 def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
     mode = opt.mode
@@ -72,8 +79,8 @@ def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
 
 
     if opt.data == 'FashionMinist':
-        transform_list = [lambda x: transforms.functional.to_grayscale(x, num_output_channels=3)] + transform_list
-        transform_list.append(lambda x: transforms.functional.to_grayscale(x, num_output_channels=1))
+        transform_list = [lam_1] + transform_list
+        transform_list.append(lam_2)
         transform_list.append(transforms.Resize(32))
 
 
@@ -82,7 +89,7 @@ def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
 
     transform_list.extend([
         transforms.ToTensor(),
-        transforms.Normalize(data_mean, data_std) if normalize else transforms.Lambda(lambda x: x),
+        transforms.Normalize(data_mean, data_std) if normalize else transforms.Lambda(not_a_lambda),
     ])
 
     transform = transforms.Compose(transform_list)
@@ -91,6 +98,7 @@ def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
 
 def split(aug_list):
     if '+' not in aug_list:
+        print(aug_list)
         return [int(idx) for idx in aug_list.split('-')]
     else:
         ret_list = list()
@@ -121,17 +129,18 @@ def preprocess(opt, defs, valid=False):
         return loss_fn, trainloader, validloader
 
     elif opt.data == 'FashionMinist' :
+
         loss_fn, _, _ =  inversefed.construct_dataloaders('CIFAR100', defs)
         trainset = torchvision.datasets.FashionMNIST('../data', train=True, download=True,
                        transform=transforms.Compose([
-                           lambda x: transforms.functional.to_grayscale(x, num_output_channels=3),
+                           lam_1,
                            transforms.Resize(32),
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
                        ]))
         validset = torchvision.datasets.FashionMNIST('../data', train=False, download=True,
                        transform=transforms.Compose([
-                           lambda x: transforms.functional.to_grayscale(x, num_output_channels=3),
+                           lam_1,
                            transforms.Resize(32),
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
@@ -287,5 +296,3 @@ def create_config(opt):
     else:
         raise NotImplementedError
     return config
-
-
