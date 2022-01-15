@@ -1,3 +1,4 @@
+batch_generate.sh
 models/*
 accuracy/*
 benchmark/images/*
