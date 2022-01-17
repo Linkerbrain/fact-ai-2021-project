@@ -6,4 +6,4 @@ Old code from the original paper with slight edits in order to reproduce the res
 
 ### ATSRefactored
 
-New, refactored code, used for all the orignal experiments in the report. Symlinks in some places to the old code, in particular inversefed is the same for both.
+New, refactored code, used for all our original experiments in the report. Symlinks in some places to the old code, in particular inversefed is the same for both.
