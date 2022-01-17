@@ -1,14 +1,15 @@
 """Mechanisms for image reconstruction from parameter gradients."""
 
-import torch
+import time
 from collections import defaultdict, OrderedDict
-from inversefed.nn import MetaMonkey
-from .metrics import total_variation as TV
-from .metrics import InceptionScore
-from .medianfilt import MedianPool2d
 from copy import deepcopy
 
-import time
+import torch
+
+from inversefed.nn import MetaMonkey
+from .medianfilt import MedianPool2d
+from .metrics import InceptionScore
+from .metrics import total_variation as TV
 
 DEFAULT_CONFIG = dict(signed=False,
                       boxed=True,
@@ -25,11 +26,13 @@ DEFAULT_CONFIG = dict(signed=False,
                       lr_decay=True,
                       scoring_choice='loss')
 
+
 def _label_to_onehot(target, num_classes=100):
     target = torch.unsqueeze(target, 1)
     onehot_target = torch.zeros(target.size(0), num_classes, device=target.device)
     onehot_target.scatter_(1, target, 1)
     return onehot_target
+
 
 def _validate_config(config):
     for key in DEFAULT_CONFIG.keys():
@@ -64,7 +67,6 @@ class GradientReconstructor():
         if eval:
             self.model.eval()
 
-
         stats = defaultdict(list)
         x = self._init_images(img_shape)
         scores = torch.zeros(self.config['restarts'])
@@ -84,6 +86,7 @@ class GradientReconstructor():
                 def loss_fn(pred, labels):
                     labels = torch.nn.functional.softmax(labels, dim=-1)
                     return torch.mean(torch.sum(- labels * torch.nn.functional.log_softmax(pred, dim=-1), 1))
+
                 self.loss_fn = loss_fn
         else:
             assert labels.shape[0] == self.num_images
@@ -115,7 +118,7 @@ class GradientReconstructor():
             stats['opt'] = scores[optimal_index].item()
             x_optimal = x[optimal_index]
 
-        print(f'Total time: {time.time()-start_time}.')
+        print(f'Total time: {time.time() - start_time}.')
         return x_optimal.detach(), stats
 
     def _init_images(self, img_shape):
@@ -158,7 +161,8 @@ class GradientReconstructor():
             scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                              milestones=[max_iterations // 2.667, max_iterations // 1.6,
 
-                                                                         max_iterations // 1.142], gamma=0.1)   # 3/8 5/8 7/8
+                                                                         max_iterations // 1.142],
+                                                             gamma=0.1)  # 3/8 5/8 7/8
         try:
             for iteration in range(max_iterations):
                 closure = self._gradient_closure(optimizer, x_trial, input_data, labels)
@@ -202,11 +206,16 @@ class GradientReconstructor():
                                             weights=self.config['weights'])
             if self.config['total_variation'] > 0:
                 rec_loss += self.config['total_variation'] * TV(x_trial)
+            # TODO: Do the matching:
+            # matching_loss = (x_trial - m0).mean() + (x_trial**2 - m1).mean() + (x_trial**3 - m2).mean() + (x_trial**4 - m3).mean()
+            # actionable_loss = rec_loss + matching_loss
+            # actionable_loss.backward()
             rec_loss.backward()
             if self.config['signed']:
                 x_trial.grad.sign_()
-            
+
             return rec_loss
+
         return closure
 
     def _score_trial(self, x_trial, input_gradient, label):
@@ -249,7 +258,6 @@ class GradientReconstructor():
         return x_optimal, stats
 
 
-
 class FedAvgReconstructor(GradientReconstructor):
     """Reconstruct an image from weights after n gradient descent steps."""
 
@@ -280,6 +288,7 @@ class FedAvgReconstructor(GradientReconstructor):
             if self.config['signed']:
                 x_trial.grad.sign_()
             return rec_loss
+
         return closure
 
     def _score_trial(self, x_trial, input_parameters, labels):
@@ -297,7 +306,8 @@ class FedAvgReconstructor(GradientReconstructor):
             return self.inception(x_trial)
 
 
-def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True, batch_size=0):
+def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e-4, local_steps=4, use_updates=True,
+               batch_size=0):
     """Take a few gradient descent steps to fit the model to the given input."""
     patched_model = MetaMonkey(model)
     if use_updates:
@@ -321,7 +331,8 @@ def loss_steps(model, inputs, labels, loss_fn=torch.nn.CrossEntropyLoss(), lr=1e
     if use_updates:
         patched_model.parameters = OrderedDict((name, param - param_origin)
                                                for ((name, param), (name_origin, param_origin))
-                                               in zip(patched_model.parameters.items(), patched_model_origin.parameters.items()))
+                                               in zip(patched_model.parameters.items(),
+                                                      patched_model_origin.parameters.items()))
     return list(patched_model.parameters.values())
 
 
@@ -388,13 +399,13 @@ def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def',
                 if len(trial_gradient[i].shape) >= 2:
                     for j in range(trial_gradient[i].shape[0]):
                         costs += 1 - torch.nn.functional.cosine_similarity(trial_gradient[i][j].flatten(),
-                                                                   input_gradient[i][j].flatten(),
-                                                                   0, 1e-10) * weights[i]
+                                                                           input_gradient[i][j].flatten(),
+                                                                           0, 1e-10) * weights[i]
                         cnt += 1
                 else:
                     costs += 1 - torch.nn.functional.cosine_similarity(trial_gradient[i].flatten(),
-                                                                   input_gradient[i].flatten(),
-                                                                   0, 1e-10) * weights[i]
+                                                                       input_gradient[i].flatten(),
+                                                                       0, 1e-10) * weights[i]
                     cnt += 1
                 # print(sim_out.item())
             elif cost_fn == 'simlocal':
