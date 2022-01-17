@@ -52,10 +52,17 @@ def main():
     policy_searcher = PolicySearcher(args)
 
     # make list of policies to test
-    policies = policy_searcher.make_policy_list()
+    random_policies = policy_searcher.make_policy_list()
+
+    guarenteed_policies = [
+        "3-1-7",
+        "43-18-18",
+        "21-13-3",
+        "7-4-15"
+    ]
 
     # evaluate all policies
-    policy_searcher.evaluate_policies(policies)
+    policy_searcher.evaluate_policies(guarenteed_policies + random_policies)
 
 
 if __name__ == "__main__":

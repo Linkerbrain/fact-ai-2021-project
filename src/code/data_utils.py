@@ -88,7 +88,7 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
         transform_list = [transforms.RandomCrop(32, padding=4),
                             transforms.RandomHorizontalFlip()]
 
-        # transform_list.append(Policy(augmentations))
+        transform_list.append(Policy(augmentations))
 
     # add transforms for some datasets
     if dataset_name == 'FashionMinist':
