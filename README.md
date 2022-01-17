@@ -1,9 +1,9 @@
-# fact-ai-2021-project
+## Folder structure
 
-# ATSPrivacy-Framework
+### ATSPrivacy-Framework
 
-Old code from the original paper.
+Old code from the original paper with slight edits in order to reproduce the results on our systems.
 
-# ATSRefactored
+### ATSRefactored
 
-New, refactored code, used for all the orignal experiments in the report.
+New, refactored code, used for all the orignal experiments in the report. Symlinks in some places to the old code, in particular inversefed is the same for both.
