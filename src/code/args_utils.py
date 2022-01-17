@@ -1,12 +1,11 @@
 import argparse
-from xmlrpc.client import Boolean
 
 def get_args():
     parser = argparse.ArgumentParser(description='yo')
 
         # POLICY SEARCH SETTINGS
     parser.add_argument('--check_if_exists', type=bool, default=True)
-    parser.add_argument('--num_random_policies_to_test', type=int, default=50)
+    parser.add_argument('--num_random_policies_to_test', type=int, default=500)
 
     parser.add_argument('--augmentations_per_policy', type=int, default=3)
     parser.add_argument('--num_possible_augmentations', type=int, default=50)
@@ -20,7 +19,7 @@ def get_args():
     
     parser.add_argument('--transform_mode', type=str, default='aug')
     parser.add_argument('--normalize', type=bool, default=True)
-    parser.add_argument('--augment_validation', type=Boolean, default=True)
+    parser.add_argument('--augment_validation', type=bool, default=True)
     
     parser.add_argument('--architecture', type=str, default='ResNet20-4')
     parser.add_argument('--model_trained_partially_path', type=str, default='./models/tiny_data_cifar100_ResNet20-4_100epochs.pth')
