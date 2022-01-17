@@ -130,7 +130,6 @@ class PolicyEvaluator(PrivacyMetrics):
 if __name__ == "__main__":
     args = get_args()
 
-    evaluator = PolicyEvaluator(args
-    )
+    evaluator = PolicyEvaluator(args)
 
     evaluator.evaluate_policy()

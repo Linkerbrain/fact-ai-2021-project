@@ -2,6 +2,8 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
+import numpy as np
+
 import inversefed
 from inversefed.data.loss import Classification, PSNR
 
@@ -29,13 +31,14 @@ def preprocess_data(dataset_name, data_path, batch_size, transform_mode, aug_lis
     elif dataset_name == 'FashionMnist':
         loss_fn, trainset, validset = _data_fashionmninst(data_path)
     else:
-        pass
+        raise NotImplementedError()
 
     # define transformations
     augmentations = _parse_aug_list(aug_list)
     transformations = make_transformations(dataset_name, transform_mode, augmentations, normalize)
 
     trainset.transform = transformations
+
     if augment_validation:
         validset.transform = transformations
 
@@ -49,16 +52,16 @@ def preprocess_data(dataset_name, data_path, batch_size, transform_mode, aug_lis
 def _data_cifar100(data_path):
     loss_fn = Classification()
 
-    trainset = torchvision.datasets.CIFAR10(root=data_path, train=True, download=True)
-    validset = torchvision.datasets.CIFAR10(root=data_path, train=False, download=True)
+    trainset = torchvision.datasets.CIFAR100(root=data_path, train=True, download=True, transform=transforms.ToTensor())
+    validset = torchvision.datasets.CIFAR100(root=data_path, train=False, download=True, transform=transforms.ToTensor())
 
     return loss_fn, trainset, validset
     
 def _data_fashionmninst(data_path):
     loss_fn = Classification()
 
-    trainset = torchvision.datasets.FashionMNIST(data_path, train=True, download=True)
-    validset = torchvision.datasets.FashionMNIST(data_path, train=False, download=True)
+    trainset = torchvision.datasets.FashionMNIST(data_path, train=True, download=True, transform=transforms.ToTensor())
+    validset = torchvision.datasets.FashionMNIST(data_path, train=False, download=True, transform=transforms.ToTensor())
 
     return loss_fn, trainset, validset
 
@@ -71,7 +74,7 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
 
     # settings based on dataset
     if dataset_name == 'cifar100':
-        data_mean, data_std = inversefed.consts.cifar10_mean, inversefed.consts.cifar10_std
+        data_mean, data_std = inversefed.consts.cifar100_mean, inversefed.consts.cifar100_std
     elif dataset_name == 'FashionMnist':
         data_mean, data_std  = (0.1307,), (0.3081,)
     else:
@@ -85,7 +88,7 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
         transform_list = [transforms.RandomCrop(32, padding=4),
                             transforms.RandomHorizontalFlip()]
 
-        transform_list.append(Policy(augmentations))
+        # transform_list.append(Policy(augmentations))
 
     # add transforms for some datasets
     if dataset_name == 'FashionMinist':

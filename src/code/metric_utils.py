@@ -114,6 +114,7 @@ class PrivacyMetrics:
         """
         Calculate estimated accuracy score
         """
+
         # get labels/real image
         ground_truth, labels = [], []
         for idx in idx_list:
@@ -131,6 +132,7 @@ class PrivacyMetrics:
 
         # do the maths
         jacobs, labels = self._get_batch_jacobian(self.model, ground_truth, labels)
+
         jacobs = jacobs.reshape(jacobs.size(0), -1).cpu().numpy()
 
         return self._eval_score(jacobs, labels)
