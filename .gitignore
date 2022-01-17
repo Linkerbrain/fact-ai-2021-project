@@ -1,3 +1,13 @@
+# custom
+src/data/*
+src/models/*
+src/results/*
+.vscode
+
+old_code/checkpoints/*
+old_code/search/*
+old_code/accuracy/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

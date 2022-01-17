@@ -1,18 +1,19 @@
 # python -u searchalg/batch_generate.py  --arch=ResNet20-4 --data=cifar100 
 import copy, random
 import argparse
+from pprint import pprint
 
 parser = argparse.ArgumentParser(description='Reconstruct some image from a trained model.')
-parser.add_argument('--arch', default=None, required=True, type=str, help='Vision model.')
-parser.add_argument('--data', default=None, required=True, type=str, help='Vision dataset.')
+parser.add_argument('--arch', default="ResNet20-4", required=False, type=str, help='Vision model.')
+parser.add_argument('--data', default="cifar100", required=False, type=str, help='Vision dataset.')
 opt = parser.parse_args()
 
 
 scheme_list = list()
 
-num_per_gpu = 20
-
-
+num_per_gpu = 160
+num_gpu = 1
+python_executable = "C:/Users/Lodewijk/anaconda3/envs/clean/python.exe"
 
 def write():
     for i in range(len(scheme_list) // num_per_gpu):
@@ -21,14 +22,13 @@ def write():
             sch_list = [str(sch) for sch in scheme_list[idx]]
             suf = '-'.join(sch_list)
              
-            cmd = 'CUDA_VISIBLE_DEVICES={} python benchmark/search_transform_attack.py --aug_list={} --mode=aug --arch={} --data={} --epochs=100'.format(i%8, suf, opt.arch, opt.data)
+            cmd = '{} benchmark/search_transform_attack.py --aug_list={} --mode=aug --arch={} --data={} --epochs=100'.format(python_executable, suf, opt.arch, opt.data)
             print(cmd)
         print('}&')
 
 
-
 def backtracing(num, scheme):
-    for _ in range(8 * 10 * num_per_gpu):
+    for _ in range(num_gpu * 10 * num_per_gpu):
         scheme = list()
         for i in range(3):
             scheme.append(random.randint(-1, 50))
@@ -37,7 +37,9 @@ def backtracing(num, scheme):
             if -1 in new_policy:
                 new_policy.remove(-1)
         scheme_list.append(new_policy)
-    write()
+
+    pprint(scheme_list)
+    # write()
 
 
 

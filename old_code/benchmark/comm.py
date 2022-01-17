@@ -29,7 +29,6 @@ class sub_transform:
     def __init__(self, policy_list):
         self.policy_list = policy_list
 
-
     def __call__(self, img):
         idx = np.random.randint(0, len(self.policy_list))
         select_policy = self.policy_list[idx]
@@ -65,9 +64,10 @@ def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
                             transforms.RandomHorizontalFlip()]
 
     if len(policy_list) > 0 and mode == 'aug':
-
         transform_list = [transforms.RandomCrop(32, padding=4),
                             transforms.RandomHorizontalFlip()]
+        
+        print("Creating transforms for policies:", policy_list)
         transform_list.append(construct_policy(policy_list))
 
 
@@ -77,7 +77,7 @@ def build_transform(normalize=True, policy_list=list(), opt=None, defs=None):
         transform_list.append(transforms.Resize(32))
 
 
-    print(transform_list)
+    print("Transformation Pipeline:", transform_list)
 
 
     transform_list.extend([
@@ -109,6 +109,7 @@ def preprocess(opt, defs, valid=False):
             policy_list = []
         if not valid:
             trainset.transform = build_transform(True, policy_list, opt, defs)
+            
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=defs.batch_size,
                     shuffle=True, drop_last=False, num_workers=4, pin_memory=True)
 
