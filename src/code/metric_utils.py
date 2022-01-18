@@ -34,7 +34,7 @@ class PrivacyMetrics:
                                                                         None]
             ds = torch.as_tensor(inversefed.consts.cifar10_std, device=self.device)[:, None,
                                                                         None]
-        elif self.dataset_name == 'FashionMinist':
+        elif self.dataset_name == 'FashionMnist' or self.dataset_name == 'Mnist':
             dm = torch.Tensor([0.1307]).view(1, 1, 1).cuda()
             ds = torch.Tensor([0.3081]).view(1, 1, 1).cuda()
         else:

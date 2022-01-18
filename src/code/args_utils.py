@@ -17,13 +17,13 @@ def get_args():
 
     parser.add_argument('--dataset_name', type=str, default='cifar100')
     parser.add_argument('--data_path', type=str, default='./data')
-    
+
     parser.add_argument('--transform_mode', type=str, default='aug')
     parser.add_argument('--normalize', type=bool, default=True)
     parser.add_argument('--augment_validation', type=Boolean, default=True)
-    
+
     parser.add_argument('--architecture', type=str, default='ResNet20-4')
-    parser.add_argument('--model_trained_partially_path', type=str, default='./models/tiny_data_cifar100_ResNet20-4_100epochs.pth')
+    parser.add_argument('--model_trained_partially_path', type=str, default='./models/ResNet20-4.pth')
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--epochs', type=int, default=100)
 

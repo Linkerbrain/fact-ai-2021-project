@@ -16,6 +16,8 @@ from tqdm import tqdm
 from PIL import Image
 import inversefed
 from inversefed.data.data_processing import _build_cifar100, _get_meanstd
+from inversefed.data.data_processing import _build_mnist, _get_meanstd
+# from inversefed.data.data_processing import _build_imagenet, _get_meanstd
 
 from args_utils import get_args
 from data_utils import preprocess_data
