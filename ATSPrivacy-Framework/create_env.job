@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH --job-name=env_create
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --time=1:00:00
+#SBATCH --mem=32000M
+#SBATCH --partition=gpu_shared_course
+#SBATCH --output=out/env_create_%A.out
+
+module purge
+
+#module load 2020
+###module load PyTorch/1.8.1-fosscuda-2020a-imkl
+
+module load 2021
+module load Anaconda3/2021.05
+
+
+#srun python -u searchalg/search_best.py --data=cifar100 --arch=ResNet20-4
+conda env create -f environment.yml
+
