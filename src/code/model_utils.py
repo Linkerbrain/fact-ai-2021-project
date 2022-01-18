@@ -1,5 +1,6 @@
 import inversefed
 
+
 def create_model(dataset_name, architecture):
     """
     Creates an `architecture` type model that fits onto `dataset_name`
