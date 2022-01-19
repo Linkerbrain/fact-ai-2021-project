@@ -12,7 +12,7 @@ import inspect
 import matplotlib.pyplot as plt
 import numpy as np
 import inversefed
-
+#
 class MnistResNet(nn.Module):
     def __init__(self, in_channels=1):
         super(MnistResNet, self).__init__()
@@ -24,19 +24,16 @@ class MnistResNet(nn.Module):
         # Hence in_channels is set as 1 or 3 respectively
         # original definition of the first layer on the ResNet class
         # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        print(self.model.conv1)
         # Change the output layer to output 10 classes instead of 1000 classes
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Linear(num_ftrs, 10)
 
     def forward(self, x):
         return self.model(x)
-
-
-my_resnet = MnistResNet()
 #
-input = torch.randn((16,1,244,244))
-output = my_resnet(input)
+#
+my_resnet = MnistResNet()
+
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -140,4 +137,8 @@ for epoch in range(epochs):
     print(f"Epoch {epoch+1}/{epochs}, training loss: {total_loss/batches}, validation loss: {val_losses/val_batches}")
     losses.append(total_loss/batches) # for plotting learning curve
 print(f"Training time: {time.time()-start_ts}s")
-torch.save(model.state_dict(), "./Models/MnistResNet20-4.pth")
+torch.save(model.state_dict(), "./models/MnistResNet20-4.pth")
+model = MnistResNet()
+model_state_dict = torch.load("./models/MnistResNet20-4.pth")
+model_state_dict
+print(model.load_state_dict(model_state_dict))

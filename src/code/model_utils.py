@@ -10,6 +10,7 @@ def create_model(dataset_name, architecture):
     elif dataset_name == 'FashionMnist':
         model, _ = inversefed.construct_model(architecture, num_classes=10, num_channels=1)
     elif dataset_name == 'Mnist':
+        print(architecture)
         model, _ = inversefed.construct_model(architecture, num_classes=10, num_channels=1)
     else:
         raise NotImplementedError()

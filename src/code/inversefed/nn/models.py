@@ -13,6 +13,24 @@ import numpy as np
 from ..utils import set_random_seed
 
 
+class MnistResNet(nn.Module):
+    def __init__(self, in_channels=1):
+        super(MnistResNet, self).__init__()
+
+        # Load a pretrained resnet model from torchvision.models in Pytorch
+        self.model, _ = construct_model('ResNet20', num_classes=10, num_channels=1)
+
+        # Change the input layer to take Grayscale image, instead of RGB images.
+        # Hence in_channels is set as 1 or 3 respectively
+        # original definition of the first layer on the ResNet class
+        # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        # Change the output layer to output 10 classes instead of 1000 classes
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_ftrs, 10)
+
+    def forward(self, x):
+        return self.model(x)
+#
 
 
 def construct_model(model, num_classes=10, seed=None, num_channels=3, modelkey=None):
@@ -88,6 +106,8 @@ def construct_model(model, num_classes=10, seed=None, num_channels=3, modelkey=N
             ('linear3', torch.nn.Linear(width, num_classes))]))
     elif model == 'ResNet20':
         model = ResNet(torchvision.models.resnet.BasicBlock, [3, 3, 3], num_classes=num_classes, num_channels=num_channels, base_width=16)
+    elif model == 'MnistResNet':
+        model = MnistResNet()
     elif model == 'ResNet20-nostride':
         model = ResNet(torchvision.models.resnet.BasicBlock, [3, 3, 3], num_classes=num_classes, num_channels=num_channels, base_width=16,
                        strides=[1, 1, 1, 1])
