@@ -26,19 +26,22 @@ conda activate ats
 
 
 ## Quick Start 
-### Step1 Download Key Files 
-[tiny_data trained network for search](https://entuedu-my.sharepoint.com/:u:/g/personal/gaow0007_e_ntu_edu_sg/ETkgPi-c17pAtR2ykbGCI8cBoK0651EgFIeBTdJVSW99Zw?e=FIpq6E)
+### Step1 Download Key Files and put it in correct checkpoints folder with name checkpoints/tiny_data_FashionMinist_arch_ResNet20-4FashionMinist/
+```
+python train_tinymodel_mnist.py
+```
 
 
 ### Step2 Automatic Transformation Search
 ```
 # download a tiny_data trained network for search 
-python -u searchalg/batch_generate.py  --arch=ResNet20-4 --data=cifar100 > batch_generate.sh
+python -u searchalg/batch_generate.py  --arch=ResNet20-4FashionMinist --data=FashionMinist > batch_generate.sh
 bash batch_generate.sh
-python -u searchalg/search_best.py --arch=ResNet20-4 --data=cifar100
+python -u searchalg/search_best.py --arch=ResNet20-4FashionMinist --data=FashionMinist
 ```
 
 ### Step3 Privacy-Perserving Evaluation
+Get the correct functions, this file has not been updated for FashionMnist but with the changes in the command lines as above, it will work.
 ```
 bash benchmark/run/benchmark_attack.sh
 ```
