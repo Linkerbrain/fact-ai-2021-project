@@ -176,9 +176,9 @@ def main():
     model = create_model(opt)
     model.to(**setup)
     old_state_dict = copy.deepcopy(model.state_dict())
-    print(opt.data, opt.arch, opt.epochs)
-    model_state_dict = torch.load("checkpoints/tiny_data_FashionMinist_arch_ResNet20-4/5.pth")
-    # model_state_dict = torch.load('checkpoints/tiny_data_{}_arch_{}/{}.pth'.format(opt.data, opt.arch, opt.epochs), map_location=device)
+    # print(opt.data, opt.arch, opt.epochs)
+    # model_state_dict = torch.load("checkpoints/tiny_data_FashionMinist_arch_ResNet20-4/5.pth")
+    model_state_dict = torch.load('checkpoints/tiny_data_{}_arch_{}/{}.pth'.format(opt.data, opt.arch, opt.epochs), map_location=device)
     model.load_state_dict(model_state_dict)
 
     model.eval()
