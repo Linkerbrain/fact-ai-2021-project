@@ -96,6 +96,10 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
         transform_list.append(lambda x: transforms.functional.to_grayscale(x, num_output_channels=1))
         transform_list.append(transforms.Resize(32))
 
+    # These are the actual means and stds calculated from the training set,
+    # which differ some from the consts given by inversefed, but in the interest
+    # of keeping the setting similar to the original paper, we use the consts from inversefed
+    # data_mean, data_std = [ 0.4382,  0.4178,  0.3772], list(np.sqrt([0.0700,  0.0657,  0.0639]))
     # add normalisation
     transform_list.extend([
         transforms.ToTensor(),

@@ -3,6 +3,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
+  - tqdm==4.62.3
   - _libgcc_mutex=0.1=main
   - attrs=19.3.0=py_0
   - backcall=0.1.0=py38_0

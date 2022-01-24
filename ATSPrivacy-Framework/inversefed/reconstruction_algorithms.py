@@ -47,13 +47,15 @@ def _validate_config(config):
 class GradientReconstructor():
     """Instantiate a reconstruction algorithm."""
 
-    def __init__(self, model, mean_std=(0.0, 1.0), config=DEFAULT_CONFIG, num_images=1):
+    def __init__(self, model, mean_std=(0.0, 1.0), config=DEFAULT_CONFIG, num_images=1, extra_loss_fn=lambda image: 0., preprocessing_module=None):
         """Initialize with algorithm setup."""
         self.config = _validate_config(config)
         self.model = model
         self.setup = dict(device=next(model.parameters()).device, dtype=next(model.parameters()).dtype)
         self.mean_std = mean_std
         self.num_images = num_images
+        self.extra_loss_fn = extra_loss_fn
+        self.prep_module = preprocessing_module
 
         if self.config['scoring_choice'] == 'inception':
             self.inception = InceptionScore(batch_size=1, setup=self.setup)
@@ -133,25 +135,29 @@ class GradientReconstructor():
 
     def _run_trial(self, x_trial, input_data, labels, dryrun=False):
         x_trial.requires_grad = True
+        if self.prep_module is not None:
+            prep_module_params = list(self.prep_module.parameters())
+        else:
+            prep_module_params = []
         if self.reconstruct_label:
             output_test = self.model(x_trial)
             labels = torch.randn(output_test.shape[1]).to(**self.setup).requires_grad_(True)
 
             if self.config['optim'] == 'adam':
-                optimizer = torch.optim.Adam([x_trial, labels], lr=self.config['lr'])
+                optimizer = torch.optim.Adam([x_trial, labels] + prep_module_params, lr=self.config['lr'])
             elif self.config['optim'] == 'sgd':  # actually gd
-                optimizer = torch.optim.SGD([x_trial, labels], lr=0.01, momentum=0.9, nesterov=True)
+                optimizer = torch.optim.SGD([x_trial, labels] + prep_module_params, lr=0.01, momentum=0.9, nesterov=True)
             elif self.config['optim'] == 'LBFGS':
-                optimizer = torch.optim.LBFGS([x_trial, labels], lr=self.config['lr'])
+                optimizer = torch.optim.LBFGS([x_trial, labels] + prep_module_params, lr=self.config['lr'])
             else:
                 raise ValueError()
         else:
             if self.config['optim'] == 'adam':
-                optimizer = torch.optim.Adam([x_trial], lr=self.config['lr'])
+                optimizer = torch.optim.Adam([x_trial] + prep_module_params, lr=self.config['lr'])
             elif self.config['optim'] == 'sgd':  # actually gd
-                optimizer = torch.optim.SGD([x_trial], lr=0.01, momentum=0.9, nesterov=True)
+                optimizer = torch.optim.SGD([x_trial] + prep_module_params, lr=0.01, momentum=0.9, nesterov=True)
             elif self.config['optim'] == 'LBFGS':
-                optimizer = torch.optim.LBFGS([x_trial], lr=self.config['lr'])
+                optimizer = torch.optim.LBFGS([x_trial] + prep_module_params, lr=self.config['lr'])
             else:
                 raise ValueError()
 
@@ -167,6 +173,8 @@ class GradientReconstructor():
             for iteration in range(max_iterations):
                 closure = self._gradient_closure(optimizer, x_trial, input_data, labels)
                 rec_loss = optimizer.step(closure)
+                if self.prep_module is not None:
+                    self.prep_module.clip()
                 if self.config['lr_decay']:
                     scheduler.step()
 
@@ -198,7 +206,11 @@ class GradientReconstructor():
         def closure():
             optimizer.zero_grad()
             self.model.zero_grad()
-            loss = self.loss_fn(self.model(x_trial), label)
+            if self.prep_module is None:
+                model_input = x_trial
+            else:
+                model_input = self.prep_module(x_trial)
+            loss = self.loss_fn(self.model(model_input), label)
             param_list = [param for param in self.model.parameters() if param.requires_grad]
             gradient = torch.autograd.grad(loss, param_list, create_graph=True)
             rec_loss = reconstruction_costs([gradient], input_gradient,
@@ -207,10 +219,11 @@ class GradientReconstructor():
             if self.config['total_variation'] > 0:
                 rec_loss += self.config['total_variation'] * TV(x_trial)
             # TODO: Do the matching:
-            # matching_loss = (x_trial - m0).mean() + (x_trial**2 - m1).mean() + (x_trial**3 - m2).mean() + (x_trial**4 - m3).mean()
-            # actionable_loss = rec_loss + matching_loss
-            # actionable_loss.backward()
-            rec_loss.backward()
+            actionable_loss = rec_loss + self.extra_loss_fn(x_trial)
+            # if (actionable_loss - rec_loss)**2 > 1.0:
+            #     print(rec_loss, actionable_loss)
+            actionable_loss.backward()
+            # rec_loss.backward()
             if self.config['signed']:
                 x_trial.grad.sign_()
 
@@ -222,7 +235,11 @@ class GradientReconstructor():
         if self.config['scoring_choice'] == 'loss':
             self.model.zero_grad()
             x_trial.grad = None
-            loss = self.loss_fn(self.model(x_trial), label)
+            if self.prep_module is None:
+                model_input = x_trial
+            else:
+                model_input = self.prep_module(x_trial)
+            loss = self.loss_fn(self.model(model_input), label)
             param_list = [param for param in self.model.parameters() if param.requires_grad]
             gradient = torch.autograd.grad(loss, param_list, create_graph=False)
             return reconstruction_costs([gradient], input_gradient,

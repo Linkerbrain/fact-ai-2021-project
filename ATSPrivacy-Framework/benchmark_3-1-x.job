@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#SBATCH --job-name=3-1-x
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=3
+#SBATCH --gres=gpu:1
+#SBATCH --time=30:00:00
+#SBATCH --mem=32000M
+#SBATCH --partition=gpu_shared_course
+#SBATCH --output=out/benchmark_3-1-x_%A.out
+
+module purge
+
+#module load 2020
+###module load PyTorch/1.8.1-fosscuda-2020a-imkl
+
+module load 2021
+module load Anaconda3/2021.05
+
+source activate ats
+srun bash benchmark/run/benchmark_3-1-x.sh
+
