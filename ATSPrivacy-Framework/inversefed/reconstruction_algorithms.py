@@ -219,7 +219,7 @@ class GradientReconstructor():
             if self.config['total_variation'] > 0:
                 rec_loss += self.config['total_variation'] * TV(x_trial)
             # TODO: Do the matching:
-            actionable_loss = rec_loss + self.extra_loss_fn(x_trial)
+            actionable_loss = rec_loss #+ self.extra_loss_fn(x_trial)
             # if (actionable_loss - rec_loss)**2 > 1.0:
             #     print(rec_loss, actionable_loss)
             actionable_loss.backward()

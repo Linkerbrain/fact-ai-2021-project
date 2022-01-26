@@ -143,7 +143,10 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     output_denormalized = (output * ds + dm).squeeze()
     input_denormalized = (ground_truth * ds + dm).cpu().squeeze()
 
-    output_transformed = (prep_module(output_denormalized.unsqueeze(0)) if prep_module is not None else output).cpu().squeeze()
+    output_transformed = (
+        prep_module(output_denormalized.unsqueeze(0)) if prep_module is not None else output).cpu().squeeze()
+
+    # Note on code below: x and y are flipped, but the code works as long as the flip is consistent
 
     print(shape, output_transformed.shape, input_denormalized.shape)
     # Align both such that the black regions match, since it is not a requirement for the model to predict where the black regions are, and it usually fails to do so. Essentially, we align the images to the top left corner.
@@ -153,9 +156,11 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     print(f"Output shift: {cx}, {cy}")
     output_isolated[:, :shape[1] - cx, :shape[2] - cy] = output_transformed[:,
                                                          cx:, cy:]
-    # Some leeway here because some policies
-    # adjust pixel values after a translation
-    input_mask = torch.where(input_denormalized.sum(axis=0).abs() < 0.4)
+
+    # Most common value will be the black tint in the case of the 3-1-7 transform
+    black = torch.mode(input_denormalized.abs().sum(axis=0).flatten())[0]
+    # Add a leeway term because the borders have a bit of a blur
+    input_mask = torch.where(input_denormalized.abs().sum(axis=0) > black + 0.1)
     input_isolated = torch.zeros(shape)
     cx, cy = input_mask[0][0], input_mask[1][0]
     print(f"Input shift: {cx}, {cy}")
@@ -165,19 +170,27 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     # Align the output to the input such that the MSE is minimal
     # Simple brute force as the images are small enough, if they are not
     # one could use feature matching or something else.
-    output_aligned = None
-    areaX, areaY = None, None
-    best_mse = float('inf')
-    for cx in range(-shape[1], shape[1]):
-        for cy in range(-shape[2], shape[2]):
-            xy = torch.tensor([[cx * 2 / shape[1], cy * 2 / shape[2]]], device=args.device, dtype=torch.float)
-            translated = stn.translate(output_denormalized.unsqueeze(0), xy).squeeze().cpu()
-            mse = ((translated - input_denormalized) ** 2).mean()
-            if mse < best_mse:
-                output_aligned = translated
-                best_mse = mse
-                areaX = (cx, shape[1]) if cx < 0 else (0, shape[1] - cx)
-                areaY = (cy, shape[2]) if cy < 0 else (0, shape[2] - cy)
+    ty, tx = prep_module.xy.detach().cpu().squeeze() if reaugment_mode['prep_with'] == 'translate' else (0, 0)
+    tx = int(-tx / 2 * shape[1])
+    ty = int(-ty / 2 * shape[2])
+    print(f"Translated by y={tx}, x={ty}")
+    # output_aligned = None
+    # areaX, areaY = None, None
+    # bcx, bcy = None, None
+    # best_mse = float('inf')
+    # for cx in range(0, abs(tx)+1) if tx < 0 else range(-abs(tx), 1): #range(0 if tx < 0 else -tx, tx+1 if tx < 0 else 1):
+    #     for cy in range(0, abs(ty)+1) if ty < 0 else range(-abs(ty), 1): #range(0 if ty < 0 else -ty, ty+1 if ty < 0 else 1):
+    #         xy = -torch.tensor([[cx * 2 / shape[1], cy * 2 / shape[2]]], device=args.device, dtype=torch.float)
+    #         translated = stn.translate(output_transformed.unsqueeze(0), xy).squeeze().cpu()
+    #         mse = ((translated - input_denormalized) ** 2).mean()
+    #         if mse < best_mse:
+    #             output_aligned = translated
+    #             best_mse = mse
+    #             areaX = (tx + cx, shape[1]) if cx > 0 else (tx - cx, shape[1] - cx)
+    #             areaY = (ty + cy, shape[2]) if cy > 0 else (ty - cy, shape[2] - cy)
+    #             bcx, bcy = cx, cy
+    # print(f"Aligned with y={bcx}, x={bcy}")
+    # print(f"Area: {areaX}, {areaY}")
 
     mean_loss = torch.mean((input_isolated - output_isolated) * (input_isolated - output_isolated))
     print("after optimization, the true mse loss {}".format(mean_loss))
@@ -189,23 +202,30 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     torchvision.utils.save_image(output_denormalized.cpu().clone(), '{}/rec_untransformed_{}.jpg'.format(save_dir, idx))
     torchvision.utils.save_image(output_transformed.cpu().clone(), '{}/rec_{}.jpg'.format(save_dir, idx))
     torchvision.utils.save_image(output_isolated.cpu().clone(), '{}/rec_isolated_{}.jpg'.format(save_dir, idx))
-    torchvision.utils.save_image(output_aligned.cpu().clone(), '{}/rec_aligned_{}.jpg'.format(save_dir, idx))
+    # torchvision.utils.save_image(output_aligned.cpu().clone(), '{}/rec_aligned_{}.jpg'.format(save_dir, idx))
     torchvision.utils.save_image(input_denormalized.cpu().clone(), '{}/ori_{}.jpg'.format(save_dir, idx))
+    torchvision.utils.save_image(input_isolated.cpu().clone(), '{}/ori_isolated_{}.jpg'.format(save_dir, idx))
 
     feat_mse = (model(prep_module(output).detach()) - model(ground_truth)).pow(2).mean()
     test_mse = (output_transformed.detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
     test_psnr = inversefed.metrics.psnr(output_transformed.unsqueeze(0), input_denormalized.unsqueeze(0))
-    test_mse_untransformed = (output_denormalized.cpu().detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
-    test_psnr_untransformed = inversefed.metrics.psnr(output_denormalized.cpu().unsqueeze(0), input_denormalized.unsqueeze(0))
+    test_mse_untransformed = (output_denormalized.cpu().detach() - input_denormalized).pow(
+        2).mean().cpu().detach().numpy()
+    test_psnr_untransformed = inversefed.metrics.psnr(output_denormalized.cpu().unsqueeze(0),
+                                                      input_denormalized.unsqueeze(0))
     test_mse_isolated = (output_isolated.detach() - input_isolated).pow(2).mean().cpu().detach().numpy()
     test_psnr_isolated = inversefed.metrics.psnr(output_isolated.unsqueeze(0), input_isolated.unsqueeze(0))
-    test_mse_aligned = (output_aligned.detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
-    test_psnr_aligned = inversefed.metrics.psnr(output_aligned.unsqueeze(0), input_denormalized.unsqueeze(0))
-    test_mse_aligned_area = (
-                output_aligned[areaX[0]:areaX[1], areaY[0]:areaY[1]].detach() - input_denormalized[areaX[0]:areaX[1],
-                                                                                areaY[0]:areaY[1]]).pow(
-        2).mean().cpu().detach().numpy()
-    test_psnr_aligned_area = inversefed.metrics.psnr(output_aligned[areaX[0]:areaX[1], areaY[0]:areaY[1]].unsqueeze(0), input_denormalized[areaX[0]:areaX[1], areaY[0]:areaY[1]].unsqueeze(0))
+    test_mse_isolated_area = (output_isolated[:, :shape[1]-abs(tx), :shape[2]-abs(ty)].detach() - input_isolated[:, :shape[1]-abs(tx), :shape[2]-abs(ty)]).pow(2).mean().cpu().detach().numpy()
+    test_psnr_isolated_area = inversefed.metrics.psnr(output_isolated[:, :shape[1]-abs(tx), :shape[2]-abs(ty)].unsqueeze(0), input_isolated[:, :shape[1]-abs(tx), :shape[2]-abs(ty)].unsqueeze(0))
+    # test_mse_aligned = (output_aligned.detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
+    # test_psnr_aligned = inversefed.metrics.psnr(output_aligned.unsqueeze(0), input_denormalized.unsqueeze(0))
+    # test_mse_aligned_area = (
+    #         output_aligned[:, areaX[0]:areaX[1], areaY[0]:areaY[1]].detach() - input_denormalized[:, areaX[0]:areaX[1],
+    #                                                                         areaY[0]:areaY[1]]).pow(
+    #     2).mean().cpu().detach().numpy()
+    # test_psnr_aligned_area = inversefed.metrics.psnr(output_aligned[:, areaX[0]:areaX[1], areaY[0]:areaY[1]].unsqueeze(0),
+    #                                                  input_denormalized[:, areaX[0]:areaX[1], areaY[0]:areaY[1]].unsqueeze(
+    #                                                      0))
 
     return {
         'feat_mse': feat_mse,
@@ -215,10 +235,12 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
         'test_psnr_untransformed': test_psnr_untransformed,
         'test_mse_isolated': test_mse_isolated,
         'test_psnr_isolated': test_psnr_isolated,
-        'test_mse_aligned': test_mse_aligned,
-        'test_psnr_aligned': test_psnr_aligned,
-        'test_mse_aligned_area': test_mse_aligned_area,
-        'test_psnr_aligned_area': test_psnr_aligned_area,
+        'test_mse_isolated_area': test_mse_isolated_area,
+        'test_psnr_isolated_area': test_psnr_isolated_area,
+    #     'test_mse_aligned': test_mse_aligned,
+    #     'test_psnr_aligned': test_psnr_aligned,
+    #     'test_mse_aligned_area': test_mse_aligned_area,
+    #     'test_psnr_aligned_area': test_psnr_aligned_area,
     }
 
 
@@ -260,6 +282,8 @@ def main(args, setup, config, defs):
             if 'fc' in name:
                 param.requires_grad = False
 
+    save_dir = create_save_dir(args)
+
     model.eval()
     sample_list = [i for i in range(100)]
     # sample_list = [1, 25, 73, 86, 91]
@@ -273,9 +297,8 @@ def main(args, setup, config, defs):
         metric = reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validloader)
         print(metric)
         metric_list.append(metric)
-    save_dir = create_save_dir(args)
-    np.save('{}/metric.npy'.format(save_dir), metric_list)
-    print(save_dir)
+        np.save('{}/metric.npy'.format(save_dir), metric_list)
+        print(save_dir)
 
 
 if __name__ == '__main__':
