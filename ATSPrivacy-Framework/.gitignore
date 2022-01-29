@@ -2,7 +2,7 @@
 batch_generate.sh
 models/*
 accuracy/*
-benchmark/images/*
+#benchmark/images/*
 defense/images/
 defense/checkpoints/
 benchmark/wrong/*

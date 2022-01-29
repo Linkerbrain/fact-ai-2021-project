@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=train
+#SBATCH --job-name=accuracy
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=3
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:00:00
+#SBATCH --time=4:00:00
 #SBATCH --mem=32000M
 #SBATCH --partition=gpu_shared_course
-#SBATCH --output=out/benchmark_train_%A.out
+#SBATCH --output=out/benchmark_accuracy_%A.out
 
 module purge
 
@@ -18,5 +18,5 @@ module load 2021
 module load Anaconda3/2021.05
 
 source activate ats
-srun bash benchmark/run/benchmark_train.sh
+srun bash benchmark/run/benchmark_accuracy.sh
 

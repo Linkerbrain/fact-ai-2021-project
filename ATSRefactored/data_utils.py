@@ -34,7 +34,10 @@ def preprocess_data(dataset_name, data_path, batch_size, transform_mode, aug_lis
         raise NotImplementedError()
 
     # define transformations
-    augmentations = _parse_aug_list(aug_list)
+    if transform_mode == 'aug':
+        augmentations = _parse_aug_list(aug_list)
+    else:
+        augmentations = []
     transformations = make_transformations(dataset_name, transform_mode, augmentations, normalize)
 
     trainset.transform = transformations
@@ -81,13 +84,9 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
         raise NotImplementedError
 
     # build transform list
-    if mode == 'crop':
-        transform_list = [transforms.RandomCrop(32, padding=4),
-                            transforms.RandomHorizontalFlip()]
-    elif mode == 'aug' and len(augmentations) > 0:
-        transform_list = [transforms.RandomCrop(32, padding=4),
-                            transforms.RandomHorizontalFlip()]
-
+    transform_list = [transforms.RandomCrop(32, padding=4),
+                      transforms.RandomHorizontalFlip()]
+    if mode == 'aug' and len(augmentations) > 0:
         transform_list.append(Policy(augmentations))
 
     # add transforms for some datasets

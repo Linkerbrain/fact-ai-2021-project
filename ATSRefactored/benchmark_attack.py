@@ -23,23 +23,153 @@ import argparse
 from data_utils import preprocess_data
 from model_utils import create_model
 
-# Stick to inversed optim mode
-config = dict(signed=True,
-              boxed=True,
-              cost_fn='sim',
-              indices='def',
-              weights='equal',
-              lr=0.1,
-              optim='adam',
-              restarts=1,
-              max_iterations=4800,
-              # max_iterations=1,
-              total_variation=1e-4,
-              init='randn',
-              filter='none',
-              lr_decay=True,
-              scoring_choice='loss')
+def create_config(optim):
+    """ Configure original attack model parameters """
+    if optim == 'inversed':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='sim',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-simlocal':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='simlocal',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-zero':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='sim',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='zeros',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-sim-out':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='out_sim',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='zeros',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-sgd-sim':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='sim',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='sgd',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-LBFGS-sim':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='sim',
+                      indices='def',
+                      weights='equal',
+                      lr=1e-4,
+                      optim='LBFGS',
+                      restarts=16,
+                      max_iterations=300,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=False,
+                      scoring_choice='loss')
+    elif optim == 'inversed-adam-L1':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='l1',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'inversed-adam-L2':
+        config = dict(signed=True,
+                      boxed=True,
+                      cost_fn='l2',
+                      indices='def',
+                      weights='equal',
+                      lr=0.1,
+                      optim='adam',
+                      restarts=1,
+                      max_iterations=4800,
+                      total_variation=1e-4,
+                      init='randn',
+                      filter='none',
+                      lr_decay=True,
+                      scoring_choice='loss')
+    elif optim == 'zhu':
+        config = dict(signed=False,
+                      boxed=False,
+                      cost_fn='l2',
+                      indices='def',
+                      weights='equal',
+                      lr=1e-4,
+                      optim='LBFGS',
+                      restarts=2,
+                      max_iterations=50,  # ??
+                      total_variation=1e-3,
+                      init='randn',
+                      filter='none',
+                      lr_decay=False,
+                      scoring_choice='loss')
+        seed = 1
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        import random
+        random.seed(seed)
+    else:
+        raise NotImplementedError
+    return config
 
+""" Configure the updated attack parameters """
 reaugment_modes = dict(
     none=dict(
         prep_with='none',
@@ -51,6 +181,14 @@ reaugment_modes = dict(
         prep_with='translate',
         prep_args=dict(clipX=1.1, clipY=0.2)
     ),
+    translate_clipped2=dict(
+        prep_with='translate',
+        prep_args=dict(clipX=0.4, clipY=0.4)
+    ),
+    translate_clipped3=dict(
+        prep_with='translate',
+        prep_args=dict(clipX=1.1, clipY=0.4)
+    ),
     shiftL=dict(
         prep_with='shiftL',
     ),
@@ -58,6 +196,8 @@ reaugment_modes = dict(
         prep_with='shiftR',
     )
 )
+
+
 
 
 def moment_matching_loss(moments, image, moment_range, alpha=1):
@@ -144,7 +284,7 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     input_denormalized = (ground_truth * ds + dm).cpu().squeeze()
 
     output_transformed = (
-        prep_module(output_denormalized.unsqueeze(0)) if prep_module is not None else output).cpu().squeeze()
+        prep_module(output_denormalized.unsqueeze(0)) if prep_module is not None else output_denormalized).cpu().squeeze()
 
     # Note on code below: x and y are flipped, but the code works as long as the flip is consistent
 
@@ -152,7 +292,7 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     # Align both such that the black regions match, since it is not a requirement for the model to predict where the black regions are, and it usually fails to do so. Essentially, we align the images to the top left corner.
     output_mask = torch.where(output_transformed.sum(axis=0) != 0)
     output_isolated = torch.zeros(shape)
-    cx, cy = output_mask[0][0], output_mask[1][0]
+    cx, cy = (output_mask[0][0], output_mask[1][0]) if output_mask[0].numel() > 0 else (0, 0)
     print(f"Output shift: {cx}, {cy}")
     output_isolated[:, :shape[1] - cx, :shape[2] - cy] = output_transformed[:,
                                                          cx:, cy:]
@@ -162,35 +302,38 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     # Add a leeway term because the borders have a bit of a blur
     input_mask = torch.where(input_denormalized.abs().sum(axis=0) > black + 0.1)
     input_isolated = torch.zeros(shape)
-    cx, cy = input_mask[0][0], input_mask[1][0]
+    cx, cy = (input_mask[0][0], input_mask[1][0]) if input_mask[0].numel() > 0 else (0, 0)
     print(f"Input shift: {cx}, {cy}")
     input_isolated[:, :shape[1] - cx, :shape[2] - cy] = input_denormalized[:, cx:,
                                                         cy:]
 
-    # Align the output to the input such that the MSE is minimal
-    # Simple brute force as the images are small enough, if they are not
-    # one could use feature matching or something else.
-    ty, tx = prep_module.xy.detach().cpu().squeeze() if reaugment_mode['prep_with'] == 'translate' else (0, 0)
-    tx = int(-tx / 2 * shape[1])
-    ty = int(-ty / 2 * shape[2])
-    print(f"Translated by y={tx}, x={ty}")
-    # output_aligned = None
-    # areaX, areaY = None, None
-    # bcx, bcy = None, None
-    # best_mse = float('inf')
-    # for cx in range(0, abs(tx)+1) if tx < 0 else range(-abs(tx), 1): #range(0 if tx < 0 else -tx, tx+1 if tx < 0 else 1):
-    #     for cy in range(0, abs(ty)+1) if ty < 0 else range(-abs(ty), 1): #range(0 if ty < 0 else -ty, ty+1 if ty < 0 else 1):
-    #         xy = -torch.tensor([[cx * 2 / shape[1], cy * 2 / shape[2]]], device=args.device, dtype=torch.float)
-    #         translated = stn.translate(output_transformed.unsqueeze(0), xy).squeeze().cpu()
-    #         mse = ((translated - input_denormalized) ** 2).mean()
-    #         if mse < best_mse:
-    #             output_aligned = translated
-    #             best_mse = mse
-    #             areaX = (tx + cx, shape[1]) if cx > 0 else (tx - cx, shape[1] - cx)
-    #             areaY = (ty + cy, shape[2]) if cy > 0 else (ty - cy, shape[2] - cy)
-    #             bcx, bcy = cx, cy
-    # print(f"Aligned with y={bcx}, x={bcy}")
-    # print(f"Area: {areaX}, {areaY}")
+    if prep_module is not None:
+        # Align the output to the input such that the MSE is minimal
+        # Simple brute force as the images are small enough, if they are not
+        # one could use feature matching or something else.
+        ty, tx = prep_module.xy.detach().cpu().squeeze() if reaugment_mode['prep_with'] == 'translate' else (0, 0)
+        tx = int(-tx / 2 * shape[1])
+        ty = int(-ty / 2 * shape[2])
+        print(f"Translated by y={tx}, x={ty}")
+        # output_aligned = None
+        # areaX, areaY = None, None
+        # bcx, bcy = None, None
+        # best_mse = float('inf')
+        # for cx in range(0, abs(tx)+1) if tx < 0 else range(-abs(tx), 1): #range(0 if tx < 0 else -tx, tx+1 if tx < 0 else 1):
+        #     for cy in range(0, abs(ty)+1) if ty < 0 else range(-abs(ty), 1): #range(0 if ty < 0 else -ty, ty+1 if ty < 0 else 1):
+        #         xy = -torch.tensor([[cx * 2 / shape[1], cy * 2 / shape[2]]], device=args.device, dtype=torch.float)
+        #         translated = stn.translate(output_transformed.unsqueeze(0), xy).squeeze().cpu()
+        #         mse = ((translated - input_denormalized) ** 2).mean()
+        #         if mse < best_mse:
+        #             output_aligned = translated
+        #             best_mse = mse
+        #             areaX = (tx + cx, shape[1]) if cx > 0 else (tx - cx, shape[1] - cx)
+        #             areaY = (ty + cy, shape[2]) if cy > 0 else (ty - cy, shape[2] - cy)
+        #             bcx, bcy = cx, cy
+        # print(f"Aligned with y={bcx}, x={bcy}")
+        # print(f"Area: {areaX}, {areaY}")
+    else:
+        tx, ty = 0, 0
 
     mean_loss = torch.mean((input_isolated - output_isolated) * (input_isolated - output_isolated))
     print("after optimization, the true mse loss {}".format(mean_loss))
@@ -206,8 +349,10 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     torchvision.utils.save_image(input_denormalized.cpu().clone(), '{}/ori_{}.jpg'.format(save_dir, idx))
     torchvision.utils.save_image(input_isolated.cpu().clone(), '{}/ori_isolated_{}.jpg'.format(save_dir, idx))
 
-    feat_mse = (model(prep_module(output).detach()) - model(ground_truth)).pow(2).mean()
-    test_mse = (output_transformed.detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
+    # feat_mse = (model(prep_module(output).detach()) - model(ground_truth)).pow(2).mean()
+    # test_mse = (output_transformed.detach() - input_denormalized).pow(2).mean().cpu().detach().numpy()
+    perfect_psnr = inversefed.metrics.psnr(input_denormalized.cpu().unsqueeze(0), input_denormalized.cpu().unsqueeze(0))
+
     test_psnr = inversefed.metrics.psnr(output_transformed.unsqueeze(0), input_denormalized.unsqueeze(0))
     test_mse_untransformed = (output_denormalized.cpu().detach() - input_denormalized).pow(
         2).mean().cpu().detach().numpy()
@@ -228,8 +373,9 @@ def reconstruct(args, setup, config, idx, model, loss_fn, trainloader, validload
     #                                                      0))
 
     return {
-        'feat_mse': feat_mse,
-        'test_mse': test_mse,
+        # 'feat_mse': feat_mse,
+        # 'test_mse': test_mse,
+        'perfect_psnr': perfect_psnr,
         'test_psnr': test_psnr,
         'test_mse_untransformed': test_mse_untransformed,
         'test_psnr_untransformed': test_psnr_untransformed,
@@ -285,9 +431,13 @@ def main(args, setup, config, defs):
     save_dir = create_save_dir(args)
 
     model.eval()
-    sample_list = [i for i in range(100)]
+    if args.samples == []:
+        sample_list = [i for i in range(100)]
+    else:
+        sample_list = args.samples
     # sample_list = [1, 25, 73, 86, 91]
     # sample_list = [9, 12, 30, 31, 77, 86, 90]
+    # sample_list = [75]
     metric_list = list()
     mse_loss = 0
     for attack_id, idx in enumerate(sample_list):
@@ -308,7 +458,6 @@ if __name__ == '__main__':
     parse_moment_matching(parser)
 
     args = parser.parse_args()
-    args.optim = 'inversed'
 
     # init env
     setup = inversefed.utils.system_startup()
@@ -319,6 +468,8 @@ if __name__ == '__main__':
     arch = args.architecture
     trained_model = True
     mode = args.transform_mode
-    assert mode in ['normal', 'aug', 'crop']
+    assert mode in ['aug', 'crop']
+
+    config = create_config(args.optim)
 
     main(args, setup, config, defs)

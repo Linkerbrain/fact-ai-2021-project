@@ -11,8 +11,8 @@ class AffineTransform(nn.Module):
         clip_matrix = torch.FloatTensor([[clip_scaleX, clip_shearX, clip_transX],
                                          [clip_shearY, clip_scaleX, clip_transY]])
         identity = torch.tensor([[[1, 0, 0], [0, 1, 0]]], dtype=torch.float)
-        self.clip_min = self.identity - clip_matrix
-        self.clip_max = self.identity + clip_matrix
+        self.clip_min = identity - clip_matrix
+        self.clip_max = identity + clip_matrix
         # Initialize with identity transformation
         self.theta = nn.Parameter(self.identity.clone(), requires_grad=True)
 

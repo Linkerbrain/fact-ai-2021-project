@@ -181,6 +181,7 @@ class GradientReconstructor():
                 with torch.no_grad():
                     # Project into image space
                     if self.config['boxed']:
+                        # This just a clipping operation
                         x_trial.data = torch.max(torch.min(x_trial, (1 - dm) / ds), -dm / ds)
 
                     if (iteration + 1 == max_iterations) or iteration % 500 == 0:
@@ -403,10 +404,13 @@ def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def',
         for i in indices:
             if cost_fn == 'l2':
                 costs += ((trial_gradient[i] - input_gradient[i]).pow(2)).sum() * weights[i]
+                cnt += 1
             elif cost_fn == 'l1':
                 costs += ((trial_gradient[i] - input_gradient[i]).abs()).sum() * weights[i]
+                cnt += 1
             elif cost_fn == 'max':
                 costs += ((trial_gradient[i] - input_gradient[i]).abs()).max() * weights[i]
+                cnt += 1
             elif cost_fn == 'sim':
                 costs -= (trial_gradient[i] * input_gradient[i]).sum() * weights[i]
                 pnorm[0] += trial_gradient[i].pow(2).sum() * weights[i]
@@ -429,9 +433,15 @@ def reconstruction_costs(gradients, input_gradient, cost_fn='l2', indices='def',
                 costs += 1 - torch.nn.functional.cosine_similarity(trial_gradient[i].flatten(),
                                                                    input_gradient[i].flatten(),
                                                                    0, 1e-10) * weights[i]
+                cnt += 1
         if cost_fn == 'sim':
             costs = 1 + costs / pnorm[0].sqrt() / pnorm[1].sqrt()
         # Accumulate final costs
         total_costs += costs / cnt
 
-    return total_costs / len(gradients)
+    result = total_costs / len(gradients)
+    if torch.isnan(result) or torch.isinf(result):
+        print(torch.isnan(result), torch.isinf(result))
+        print(torch.isfinite(gradients).logical_not().sum(), torch.isfinite(input_gradient).logical_not().sum(), indices, weights, cnt, total_costs, pnorm, costs)
+        raise Exception("NaN or Inf")
+    return result
