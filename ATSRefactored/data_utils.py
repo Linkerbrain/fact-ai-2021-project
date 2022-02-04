@@ -2,12 +2,10 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
-import numpy as np
-
 import inversefed
-from inversefed.data.loss import Classification, PSNR
-
+from inversefed.data.loss import Classification
 from policy import Policy
+
 
 def _parse_aug_list(aug_list):
     if '+' not in aug_list:
@@ -17,6 +15,7 @@ def _parse_aug_list(aug_list):
         for aug in aug_list.split('+'):
             ret_list.append([int(idx) for idx in aug.split('-')])
         return ret_list
+
 
 def preprocess_data(dataset_name, data_path, batch_size, transform_mode, aug_list, normalize, augment_validation):
     """
@@ -46,20 +45,23 @@ def preprocess_data(dataset_name, data_path, batch_size, transform_mode, aug_lis
         validset.transform = transformations
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                shuffle=True, drop_last=False, num_workers=4, pin_memory=True)
+                                              shuffle=True, drop_last=False, num_workers=4, pin_memory=True)
     validloader = torch.utils.data.DataLoader(validset, batch_size=batch_size,
-            shuffle=False, drop_last=False, num_workers=4, pin_memory=True)
+                                              shuffle=False, drop_last=False, num_workers=4, pin_memory=True)
 
     return loss_fn, trainloader, validloader
+
 
 def _data_cifar100(data_path):
     loss_fn = Classification()
 
     trainset = torchvision.datasets.CIFAR100(root=data_path, train=True, download=True, transform=transforms.ToTensor())
-    validset = torchvision.datasets.CIFAR100(root=data_path, train=False, download=True, transform=transforms.ToTensor())
+    validset = torchvision.datasets.CIFAR100(root=data_path, train=False, download=True,
+                                             transform=transforms.ToTensor())
 
     return loss_fn, trainset, validset
-    
+
+
 def _data_fashionmninst(data_path):
     loss_fn = Classification()
 
@@ -67,6 +69,7 @@ def _data_fashionmninst(data_path):
     validset = torchvision.datasets.FashionMNIST(data_path, train=False, download=True, transform=transforms.ToTensor())
 
     return loss_fn, trainset, validset
+
 
 def make_transformations(dataset_name, mode, augmentations, normalize):
     """
@@ -79,13 +82,15 @@ def make_transformations(dataset_name, mode, augmentations, normalize):
     if dataset_name == 'cifar100':
         data_mean, data_std = inversefed.consts.cifar100_mean, inversefed.consts.cifar100_std
     elif dataset_name == 'FashionMnist':
-        data_mean, data_std  = (0.1307,), (0.3081,)
+        data_mean, data_std = (0.1307,), (0.3081,)
     else:
         raise NotImplementedError
 
+    transform_list = []
     # build transform list
-    transform_list = [transforms.RandomCrop(32, padding=4),
-                      transforms.RandomHorizontalFlip()]
+    if mode != 'normal':
+        transform_list += [transforms.RandomCrop(32, padding=4),
+                           transforms.RandomHorizontalFlip()]
     if mode == 'aug' and len(augmentations) > 0:
         transform_list.append(Policy(augmentations))
 

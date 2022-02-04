@@ -394,7 +394,7 @@ def create_checkpoint_dir(args):
     return 'checkpoints/data_{}_arch_{}_mode_{}_auglist_{}_rlabel_{}'.format(args.dataset_name, args.architecture,
                                                                              args.transform_mode,
                                                                              args.aug_list,
-                                                                             args.rlabel)
+                                                                             False)
 
 
 def main(args, setup, config, defs):
@@ -468,7 +468,7 @@ if __name__ == '__main__':
     arch = args.architecture
     trained_model = True
     mode = args.transform_mode
-    assert mode in ['aug', 'crop']
+    assert mode in ['aug', 'crop', 'normal']
 
     config = create_config(args.optim)
 

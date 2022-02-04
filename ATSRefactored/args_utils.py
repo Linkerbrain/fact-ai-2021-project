@@ -63,6 +63,7 @@ def parse_attack(parser):
     parser.add_argument('--reaugment', default='none', type=str, help='Reaugmentation mode.')
     parser.add_argument('--samples', default=[], type=int, help='If specified, the indices of images to reconstruct.',
                         nargs='*')
+    parser.add_argument('--recalculate', default=False, action='store_true', help='Do not recompute the reconstructions, just load the images already present and recompute the metrics.')
 
 
 def get_args():

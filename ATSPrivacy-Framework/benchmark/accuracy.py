@@ -73,7 +73,6 @@ def evaluation(model, validloader, epochs, batches):
     with torch.no_grad():
         for i, data in enumerate(validloader):
             X, y = data[0].to(device), data[1].to(device)
-
             outputs = model(X)  # this get's the prediction from the network
 
             val_losses += loss_function(outputs, y)
