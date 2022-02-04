@@ -4,8 +4,8 @@ from xmlrpc.client import Boolean
 
 def parse_search_args(parser):
     # POLICY SEARCH SETTINGS
-    parser.add_argument('--check_if_exists', type=bool, default=True)
-    parser.add_argument('--num_random_policies_to_test', type=int, default=50)
+    parser.add_argument('--check_if_exists', type=bool, default=False)
+    parser.add_argument('--num_random_policies_to_test', type=int, default=100)
 
     parser.add_argument('--augmentations_per_policy', type=int, default=3)
     parser.add_argument('--num_possible_augmentations', type=int, default=50)
@@ -39,6 +39,9 @@ def parse_moment_matching(parser):
 
 
 def parse_attack(parser):
+    parser.add_argument('--attack_type', default="inversed", required=False, type=str, help='Attack config')
+    parser.add_argument('--max_iters', default=2500, required=False, type=int, help='Number of iterations in attack')
+    parser.add_argument('--num_images_to_evaluate', default=20, required=False, type=int, help='Number of samples of training set to evaluate in attack')
     # parser.add_argument('--aug_list', default=None, required=True, type=str, help='Vision model.')
     # parser.add_argument('--optim', default=None, required=True, type=str, help='Vision model.')
     # parser.add_argument('--mode', default=None, required=True, type=str, help='Mode.')
@@ -65,6 +68,7 @@ def get_args():
 
     parse_search_args(parser)
     parse_single_policy(parser)
+    parse_attack(parser)
 
     args = parser.parse_args()
 
