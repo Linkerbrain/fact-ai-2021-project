@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --job-name=attack_mm
+#SBATCH --job-name=attack_dis
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=3
 #SBATCH --gres=gpu:1
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mem=32000M
 #SBATCH --partition=gpu_shared_course
 #SBATCH --output=out/benchmark_attack_%A.out

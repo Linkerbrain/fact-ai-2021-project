@@ -13,7 +13,7 @@ def parse_search_args(parser):
 
 def parse_single_policy(parser):
     # SINGLE POLICY SETTINGS
-    parser.add_argument('--aug_list', type=str, default='45-36-28')
+    parser.add_argument('--aug_list', type=str, default='')
 
     parser.add_argument('--dataset_name', type=str, default='cifar100')
     parser.add_argument('--data_path', type=str, default='./data')
@@ -43,7 +43,7 @@ def parse_attack(parser):
     parser.add_argument('--max_iters', default=2500, required=False, type=int, help='Number of iterations in attack')
     parser.add_argument('--num_images_to_evaluate', default=20, required=False, type=int, help='Number of samples of training set to evaluate in attack')
     # parser.add_argument('--aug_list', default=None, required=True, type=str, help='Vision model.')
-    # parser.add_argument('--optim', default=None, required=True, type=str, help='Vision model.')
+    parser.add_argument('--optim', default=None, required=True, type=str, help='Attack configuration.')
     # parser.add_argument('--mode', default=None, required=True, type=str, help='Mode.')
     parser.add_argument('--rlabel', default=False, type=bool, help='rlabel')
     # parser.add_argument('--arch', default=None, required=True, type=str, help='Vision model.')
@@ -61,6 +61,8 @@ def parse_attack(parser):
     # parser.add_argument('--shift_left', default=False, action='store_true', help='Shift left.')
     # parser.add_argument('--shift_right', default=False, action='store_true', help='Shift right.')
     parser.add_argument('--reaugment', default='none', type=str, help='Reaugmentation mode.')
+    parser.add_argument('--samples', default=[], type=int, help='If specified, the indices of images to reconstruct.',
+                        nargs='*')
 
 
 def get_args():

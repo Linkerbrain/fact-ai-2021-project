@@ -26,7 +26,6 @@ import policy
 from benchmark.comm import create_model, build_transform, preprocess, create_config
 
 
-
 policies = policy.policies
 
 parser = argparse.ArgumentParser(description='Reconstruct some image from a trained model.')
