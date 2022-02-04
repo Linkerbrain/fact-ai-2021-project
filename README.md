@@ -9,7 +9,7 @@ This repository contains both the original code as well as a refactored version.
 
 ## Reproduction of Reproduction
 
-This codebase is meant to be ran on a Linux system with a gpu (cuda). In the root folder an `environment.yml` environment is provided with the exact packages that this project requires.
+This codebase is meant to be ran on a Linux system with a gpu (cuda). In the root folder an `environment.yml` anaconda environment is provided with the exact packages that this project requires.
 
 The experiment that verifies the claim of the correlation between the privacy score and reconstruction PSNR can be found in the folder ATSRefactored under the name ```Result-Reproduction Correlation and Diversity.ipynb```. This notebook also contains the experiment for the second insight, which investigates the diversity of well-performing policies.
 
