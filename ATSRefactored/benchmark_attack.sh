@@ -7,7 +7,7 @@ python benchmark_attack.py --data_path ~/data --transform_mode aug --aug_list "3
 
 #python benchmark_attack.py --data_path ~/data --transform_mode crop --epochs 200 --reaugment none --optim inversed-adam-L1 "$@"
 #python benchmark_attack.py --data_path ~/data --transform_mode crop --epochs 200 --reaugment none --optim inversed-adam-L2 "$@"
-#python benchmark_attack.py --data_path ~/data --transform_mode normal --epochs 200 --reaugment none --optim inversed --rlabel=true "$@"
+#python benchmark_attack.py --data_path ~/data --transform_mode normal --epochs 200 --reaugment none --optim inversed "$@"
 #python benchmark_attack.py --data_path ~/data --transform_mode aug --aug_list "3-1-7" --epochs 200 --reaugment shiftL "$@"
 #python benchmark_attack.py --data_path ~/data --transform_mode aug --aug_list "3-1-7" --epochs 200 --reaugment shiftR "$@"
 #python benchmark_attack.py --data_path ~/data --transform_mode aug --aug_list "3-1-7" --shift_left --epochs 200 "$@"
